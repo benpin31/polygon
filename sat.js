@@ -24,17 +24,82 @@ class point {
     equal(other) {
         return this.sameAbsciss(other) && this.sameOrdinate(other) ;
     }
+
+    addVector(v) {
+        /* add a vector to ths point */
+        let res = new point(this.x + v.x, this.y + v.y) ;
+        return res ;
+    }
+}
+
+class vector {
+    constructor(M,N) {
+        /*  M and N can be : 
+            - two points, in that case, vector coordinate are Difference of N and M coordinates
+            - two coordinates
+        */
+        if (M instanceof point) {
+            this.x = N.x - M.x ;
+            this.y = N.y - M.y ;
+        } else {
+            /* vectors are coded ny their two coordinates */
+            this.x = M ;
+            this.y = N ;
+        }
+    }
+
+    is0() {
+        return this.x === 0 && this.y === 0 ;
+    }
+
+    sum(other) {
+        /* return the sum of this and another vector v */
+        let res = new vector(this.x + other.x, this.y + other.y) ;
+        return res ;
+    }
+
+    product(lambda) {
+        /* return the external product od this per lambda*/
+        let res = new vector(lambda * this.x, lambda * this.y) ;
+        return res ;
+    }
+
+    scalarProduct(other) {
+        return this.x*other.x + this.y*other.y ;
+    } 
+
+    norm() {
+        return Math.sqrt(this.scalarProduct(this)) ;
+    }
+
+    othogonalProjection(v) {
+        /* return the orthogonal projection of v on this */
+        let res = this.product(this.scalarProduct(v) / (this.norm() ** 2));
+        return res ;
+    }
 }
 
 class straightLine {
-    constructor(point1, point2) {
-        /*  Straight line are coding but two disctinct instance of class point */
-        if (!point1.equal(point2)) {
-            this.point1 = point1 ;
-            this.point2 = point2 ;
+    constructor(point1, element) {
+        /*  Straight line are coding but two disctinct instance of class point. Element can be a point, in that cas, 
+            the constructior is obvious, or a vector */
+
+        if (element instanceof point) {
+            if (!point1.equal(element)) {
+                this.point1 = point1 ;
+                this.point2 = element ;
+            } else {
+                throw "A straight line can't be definied by two identical points" ; 
+            }
         } else {
-            throw "A straight line can't be definied by two identical points" ; 
+            if (!element.is0()) {
+                this.point1 = point1 ;
+                this.point2 = point1.addVector(element) ;
+            } else {
+                throw "A straight line can't be definied by a null vector" ; 
+            } 
         }
+
     }
 
     equation() {
@@ -53,6 +118,24 @@ class straightLine {
         let denominator = Math.sqrt(lineEquation[0] ** 2 + lineEquation[1] ** 2);
         return numerator/denominator;
     }
+
+    orthogonalProjection(point) {
+        /* return the orthogonal prohjection of point on the straight line this*/
+        let direction = new vector(this.point1, this.point2) ;
+        let vectorToProject = new vector(this.point1, point) ;
+        return this.point1.addVector(direction.othogonalProjection(vectorToProject)) ;
+    }
+
+    getOrthogonalLine() {
+        /* return the orthogonal line of this which pass through the point (0,0) */
+        let lineEquation = this.equation() ;
+        let originPoint = new point(0,0) ;
+        let orthogonalDirection = new vector(lineEquation[0], lineEquation[1]) ;
+        let res = new straightLine(originPoint, orthogonalDirection) ;
+
+        return res ;
+    }
+
 }
 
 
@@ -60,13 +143,16 @@ class straightLine {
 
 // main
 
-let point1 = new point(1,-1) ;
-let point2 = new point(1,1) ;
-let point3 = new point(-1,1) ;
+let point1 = new point(-1,-1) ;
+let point2 = new point(3,1) ;
+let point3 = new point(1,1) ;
+let v1 = new vector(0,-2) ;
+let V2 = new vector(1,-1)
 
 //console.log(point1.equal(point2))
-let toto = new straightLine(point1, point2) ;
+let toto = new straightLine(point1, v1) ;
+
 //console.log(toto)
-console.log(point1.distance(point2))
-console.log(toto.equation())
-console.log(toto.distanceToPoint(point3))
+console.log(toto) ;
+console.log(toto.getOrthogonalLine()) ;
+
