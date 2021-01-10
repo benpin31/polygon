@@ -112,6 +112,27 @@ class straightLine {
         }
     }
 
+    isBefore(point1, point2) {
+        /*  We define and order relation which will be usefull to separate points in sat. point1 and point2 must belong to 
+            this */
+        if (this.point1.sameAbsciss(this.point2)) {
+            return point1.y <= point2.y ;
+        } else {
+            return point1.x <= point2.x ;
+        }
+    }
+
+    isBeforeStrict(point1, point2) {
+        /*  We define and order relation which will be usefull to separate points in sat. point1 and point2 must belong to 
+            this */
+        if (this.point1.sameAbsciss(this.point2)) {
+            return point1.y < point2.y ;
+        } else {
+            return point1.x < point2.x ;
+        }
+    }
+
+
     distanceToPoint(point) {
         let lineEquation = this.equation() ;
         let numerator = Math.abs(lineEquation[0]*point.x + lineEquation[1]*point.y + lineEquation[2] );
@@ -138,21 +159,158 @@ class straightLine {
 
 }
 
+class polygon {
+    constructor(vertices, parallelEdge = null) {
+        /*  Point array is a list of point which determin the verticies of the polygon. The list must contain 
+            only one exemplary of points. 
+            One can precise the list od the edge that are parallel on the polygon, it will be usefull to optimise 
+            sat algorithme. The structure of parralelEdge is an array of array constaining the number of the edge, 
+            with the first edge defining by the first two points, and then following the order. parallelEdge must be null
+            or contains all the edge, not only part of the edge. Two array in the same 
+            subarray arre parallels. For example, let ABCDEF a polygon, the the array [[0,2],[1,4],[3],[5]] mean that AB//CD, 
+            BC//EF , DE and FA are parallel to no other edges. */
+        this.vertices = vertices ;
+        this.parallelEdge = parallelEdge;
+    }
+
+    static getOrthogonalLines(polygonInstance) {
+        let verticesLine = [];
+        let nbVertices = polygonInstance.vertices.length;
+        let line ;
+        let nbLoop ;
+        if (polygonInstance.parallelEdge === null) {
+            nbLoop = polygonInstance.vertices.length ;
+            for (let k = 0; k < nbLoop; k++) {
+                line = new straightLine(polygonInstance.vertices[k], polygonInstance.vertices[(k+1)%nbVertices]) ;
+                verticesLine.push(line) ;
+            }
+        } else {
+            nbLoop = parallelEdge.length ;
+            let firstPoint ;
+            for (let k = 0; k < nbLoop; k++) {
+                firstPoint = polygonInstance.parallelEdge[k][0]
+                line = new straightLine(polygonInstance.vertices[firstPoint], polygonInstance.vertices[(firstPoint+1)%nbVertices]) ;
+                verticesLine.push(line) ;
+            }
+        }
+
+        let orthogonalLines = []
+        verticesLine.forEach(line => {
+            orthogonalLines.push(line.getOrthogonalLine()) ;
+        })
+
+        return orthogonalLines ;
+    }
+
+    sat(other, areParallel = false) {
+        /*  Separating Axes Theorem (S. Gottschalk. Separating axis theorem. Technical Report TR96-024,Department
+            of Computer Science, UNC Chapel Hill, 1996) : 
+                Two convex polytopes are disjoint iff there exists a separating axis orthogonal 
+                to a face of either polytope or orthogonal to an edge from each polytope. 
+            The argument areParallet indicate if all the edge of other are parallel to an edge of this. In that
+            case, there is no need to compute orthogonal lines of edges of other*/
+
+        // 1. Get all the orthogonal axis : 
+
+        let orthogonalLines = polygon.getOrthogonalLines(this) ;
+        if (!areParallel) {
+            let otherOrthogonalLine = polygon.getOrthogonalLines(other) ;
+            otherOrthogonalLine.forEach(line => {
+                orthogonalLines.push(line)
+            })
+        }
+
+        // 2. point porjection on othogonal line
+
+        let isSeparate = false ;
+        let cpt = 0;
+        
+        while (cpt < orthogonalLines.length && !isSeparate) {
+            let line = orthogonalLines[cpt] ;
+
+            let maxThis = new point(-Infinity,-Infinity) ;
+            let maxOther = new point(-Infinity,-Infinity) ; 
+            let minThis = new point(Infinity,Infinity) ;
+            let minOther = new point(Infinity,Infinity) ; 
+
+            let proj
+            this.vertices.forEach(vertice => {
+                proj = line.orthogonalProjection(vertice) ;
+                if(line.isBefore(maxThis, proj)) {
+                    maxThis = proj ;
+                }
+
+                if(line.isBefore(proj, minThis)) {
+                    minThis = proj ;
+                }
+            })
+            
+            other.vertices.forEach(vertice => {
+                proj = line.orthogonalProjection(vertice) ;
+                if(line.isBefore(maxOther, proj)) {
+                    maxOther = proj ;
+                }
+
+                if(line.isBefore(proj, minOther)) {
+                    minOther = proj ;
+                }
+            })
+
+            if (line.isBeforeStrict(maxThis, minOther) || line.isBeforeStrict(maxOther, minThis)) {
+                isSeparate = true
+            }
+
+            cpt++ ;
+        }
+
+    return isSeparate ;
+
+    }
+}
+
 
 
 
 // main
 
-let point1 = new point(-1,-1) ;
-let point2 = new point(3,1) ;
-let point3 = new point(1,1) ;
-let v1 = new vector(0,-2) ;
-let V2 = new vector(1,-1)
+const {performance} = require('perf_hooks');
 
-//console.log(point1.equal(point2))
-let toto = new straightLine(point1, v1) ;
 
-//console.log(toto)
-console.log(toto) ;
-console.log(toto.getOrthogonalLine()) ;
 
+
+res = [] ;
+res2 = [] ;
+let t0, t1 ;
+let tm = performance.now() ;
+for (let k = 0; k < 100 ; k++) {
+    let point1 = new point(Math.random()*(-3),0) ;
+    let point2 = new point(0,Math.random()*3) ;
+    let point3 = new point(Math.random()*(-3),3) ;
+    let point4 = new point(-3, Math.random()*3) ;
+    
+    let point5 = new point(Math.random()*3,0) ;
+    let point6 = new point(3,Math.random()*3) ;
+    let point7 = new point(Math.random()*3,3) ;
+    let point8 = new point(0, Math.random()*3) ;
+    
+    let polyg1 = new polygon([point1, point2, point3, point4]) ;
+    let polyg2 = new polygon([point5, point6, point7, point8]) ;
+
+    t0 = performance.now() ;
+    totodfsdfs = polyg1.sat(polyg2) ; 
+    t1 = performance.now() ;
+    res.push(t1-t0) ;
+    if (!totodfsdfs) {
+        res2.push([polyg1, polyg2])
+    }
+}
+let tM = performance.now() ;
+
+const average = arr => arr.reduce((sume, el) => sume + el, 0) / arr.length;
+
+console.log(average(res));
+console.log(tM-tm)
+console.log(res2.length)
+
+console.log(res2[0][0].vertices)
+console.log(res2[0][1].vertices)
