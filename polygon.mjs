@@ -1,7 +1,7 @@
 /*  to complete
 */
 
-class point {
+export class point {
     constructor(x,y) {
         /* Point are coded ny their two coordinates */
         this.x = x ;
@@ -30,9 +30,21 @@ class point {
         let res = new point(this.x + v.x, this.y + v.y) ;
         return res ;
     }
+
+    translate(v) {
+        /*  translate point this of vector v. contrary to addVector : the method change directly
+            the attribute of the point and return nothing*/
+        this.x += v.x;
+        this.y += v.y;
+    }
+
+    static segmentCenter(point1, point2) {
+       let res = new point((point1.x+point2.x)/2, (point1.y+point2.y)/2)
+       return res ;
+    }
 }
 
-class vector {
+export class vector {
     constructor(M,N) {
         /*  M and N can be : 
             - two points, in that case, vector coordinate are Difference of N and M coordinates
@@ -72,14 +84,24 @@ class vector {
         return Math.sqrt(this.scalarProduct(this)) ;
     }
 
+    orthogonalVector() {
+        /*  Give the unique direct orthongonal vector of this with the same norm */
+        let res = new vector(-this.y, this.x)
+        return res;
+    }
+
     othogonalProjection(v) {
         /* return the orthogonal projection of v on this */
         let res = this.product(this.scalarProduct(v) / (this.norm() ** 2));
         return res ;
     }
+
+    polarCoordinate() {
+        return [this.norm(), Math.atan(this.y/this.x)] ;
+    }
 }
 
-class straightLine {
+export class straightLine {
     constructor(point1, element) {
         /*  Straight line are coding but two disctinct instance of class point. Element can be a point, in that cas, 
             the constructior is obvious, or a vector */
@@ -159,9 +181,9 @@ class straightLine {
 
 }
 
-class polygon {
+export class polygon {
     constructor(vertices, parallelEdge = null) {
-        /*  Point array is a list of point which determin the verticies of the polygon. The list must contain 
+        /*  vertices array is a list of point which determine the vertices of the polygon. The list must contain 
             only one exemplary of points. 
             One can precise the list od the edge that are parallel on the polygon, it will be usefull to optimise 
             sat algorithme. The structure of parralelEdge is an array of array constaining the number of the edge, 
@@ -173,23 +195,33 @@ class polygon {
         this.parallelEdge = parallelEdge;
     }
 
-    static getOrthogonalLines(polygonInstance) {
+    translate(translationVector) {
+        this.vertices.forEach(point => {
+            point.translate(translationVector) ;
+        })
+    }
+
+    /*  SAT algorithm */
+
+    getOrthogonalLines() {
+        /*  return the set of orthogonal lines of the edges of this. If two edges of the polygone are parallels
+            we return only one line */
         let verticesLine = [];
-        let nbVertices = polygonInstance.vertices.length;
+        let nbVertices = this.vertices.length;
         let line ;
         let nbLoop ;
-        if (polygonInstance.parallelEdge === null) {
-            nbLoop = polygonInstance.vertices.length ;
+        if (this.parallelEdge === null) {
+            nbLoop = nbVertices ;
             for (let k = 0; k < nbLoop; k++) {
-                line = new straightLine(polygonInstance.vertices[k], polygonInstance.vertices[(k+1)%nbVertices]) ;
+                line = new straightLine(this.vertices[k], this.vertices[(k+1)%nbVertices]) ;
                 verticesLine.push(line) ;
             }
         } else {
-            nbLoop = parallelEdge.length ;
+            nbLoop = this.parallelEdge.length ;
             let firstPoint ;
             for (let k = 0; k < nbLoop; k++) {
-                firstPoint = polygonInstance.parallelEdge[k][0]
-                line = new straightLine(polygonInstance.vertices[firstPoint], polygonInstance.vertices[(firstPoint+1)%nbVertices]) ;
+                firstPoint = this.parallelEdge[k][0]
+                line = new straightLine(this.vertices[firstPoint], this.vertices[(firstPoint+1)%nbVertices]) ;
                 verticesLine.push(line) ;
             }
         }
@@ -212,9 +244,9 @@ class polygon {
 
         // 1. Get all the orthogonal axis : 
 
-        let orthogonalLines = polygon.getOrthogonalLines(this) ;
+        let orthogonalLines = this.getOrthogonalLines() ;
         if (!areParallel) {
-            let otherOrthogonalLine = polygon.getOrthogonalLines(other) ;
+            let otherOrthogonalLine = other.getOrthogonalLines() ;
             otherOrthogonalLine.forEach(line => {
                 orthogonalLines.push(line)
             })
@@ -268,49 +300,87 @@ class polygon {
     }
 }
 
+export class square extends polygon {
+    /*  A square extend polygon class. Square attributes are
+        - a set of 4 points
+        - a description of parallelEdge (see class polygon) which is always [[0,2], [1,3]]
+        - a center : the barycenter of the square 
+        - a direction which is polar coordinates of the first edge of the square.
+        Two last attribute are commod in order to rotate the square according to its center.*/
+    constructor(element1, element2) {
+        /*  there is tw way to constructs a square : 
+            - Given the coordinates of the two limit point of one of its edge. In this case, the other point 
+            are construct in direct order : edge 2 direction is edge 1 direction rotate from pi/2
+            - given its center and the polar coordinates of one of its edge. In this case, the other point 
+            are construct in direct order : edge 2 direction is edge 1 direction rotate from pi/2. polar coordinate
+            is an array of a positive number (the length of the edge), and an angle in randiant*/
+        let point1 ;
+        let point2 ;
+        let point3 ;
+        let point4 ;
 
+        let direction ;
+        let polarDirection ;
+        let center ;
 
+        if (element2 instanceof point) {
+            point1 = element1 ;
+            point2 = element2 ;
+            direction = new vector(point1, point2);
+            polarDirection = direction.polarCoordinate() ;
+            point3 = point2.addVector(direction.orthogonalVector()) ;
+            point4 = point3.addVector(direction.orthogonalVector().orthogonalVector()) ;
+            center = point.segmentCenter(point1, point3) ;
+        } else {
+            polarDirection = element2 ;
+            direction = new vector(polarDirection[0]*Math.cos(polarDirection[1]), polarDirection[0]*Math.sin(polarDirection[1])) ;
+            // create a first square with good direction, and first point = (0,0)
+            point1 = new point(0,0) ;
+            point2 = point1.addVector(direction) ;
+            point3 = point2.addVector(direction.orthogonalVector()) ;
+            point4 = point3.addVector(direction.orthogonalVector().orthogonalVector()) ;
 
-// main
+            // translate the square to the good position
+            let initialCenter = point.segmentCenter(point1, point3) ;
+            center = element1 ;
+            let translationVector = new vector(initialCenter, center) ;
 
-const {performance} = require('perf_hooks');
-
-
-
-
-res = [] ;
-res2 = [] ;
-let t0, t1 ;
-let tm = performance.now() ;
-for (let k = 0; k < 100 ; k++) {
-    let point1 = new point(Math.random()*(-3),0) ;
-    let point2 = new point(0,Math.random()*3) ;
-    let point3 = new point(Math.random()*(-3),3) ;
-    let point4 = new point(-3, Math.random()*3) ;
-    
-    let point5 = new point(Math.random()*3,0) ;
-    let point6 = new point(3,Math.random()*3) ;
-    let point7 = new point(Math.random()*3,3) ;
-    let point8 = new point(0, Math.random()*3) ;
-    
-    let polyg1 = new polygon([point1, point2, point3, point4]) ;
-    let polyg2 = new polygon([point5, point6, point7, point8]) ;
-
-    t0 = performance.now() ;
-    totodfsdfs = polyg1.sat(polyg2) ; 
-    t1 = performance.now() ;
-    res.push(t1-t0) ;
-    if (!totodfsdfs) {
-        res2.push([polyg1, polyg2])
+            point1.translate(translationVector) ;
+            point2.translate(translationVector) ;
+            point3.translate(translationVector) ;
+            point4.translate(translationVector) ;
+        }
+        super([point1, point2, point3, point4], [[0,2], [1,3]])
+        this.center = center ;
+        this.polarDirection = polarDirection ;
     }
+
+    rotate(angle) {
+        /* rotate the square according to its center. angle is in radiant */
+        this.polarDirection[1] = angle ;
+        let direction = new vector(this.polarDirection[0]*Math.cos(this.polarDirection[1]), 
+            this.polarDirection[0]*Math.sin(this.polarDirection[1])) ;
+
+        this.vertices[0] = new point(0,0) ;
+        this.vertices[1] = this.vertices[0].addVector(direction) ;
+        this.vertices[2] = this.vertices[1].addVector(direction.orthogonalVector()) ;
+        this.vertices[3] = this.vertices[2].addVector(direction.orthogonalVector().orthogonalVector()) ;
+
+        let initialCenter = point.segmentCenter(this.vertices[0], this.vertices[2]) ;
+        let translationVector = new vector(initialCenter, this.center) ;
+
+        this.vertices[0].translate(translationVector) ;
+        this.vertices[1].translate(translationVector) ;
+        this.vertices[2].translate(translationVector) ;
+        this.vertices[3].translate(translationVector) ;
+    }
+
+    translate(transactionVector) {
+        super.translate(transactionVector) ;
+        this.center.translate(transactionVector) ;
+    }
+
 }
-let tM = performance.now() ;
 
-const average = arr => arr.reduce((sume, el) => sume + el, 0) / arr.length;
 
-console.log(average(res));
-console.log(tM-tm)
-console.log(res2.length)
 
-console.log(res2[0][0].vertices)
-console.log(res2[0][1].vertices)
