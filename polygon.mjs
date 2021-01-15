@@ -1,6 +1,17 @@
 /*  to complete
 */
 
+/* Various functions */
+
+function keepNDec(x, nDec) {
+    /*  "round" a number to its nDec decimal */
+
+    return Math.round(x*10 ** nDec)/(10 ** nDec);
+}
+
+
+/* Polygones object */
+
 export class point {
     constructor(x,y) {
         /* Point are coded ny their two coordinates */
@@ -378,6 +389,28 @@ export class square extends polygon {
     translate(transactionVector) {
         super.translate(transactionVector) ;
         this.center.translate(transactionVector) ;
+    }
+
+    getLowestPointIndex() {
+        let lowestPoint = new point(Infinity, Infinity) ;
+        let lowestPointIndex = null ;
+
+        for (let k = 0; k < this.vertices.length; k++) {
+            if (keepNDec(this.vertices[k].y,6) < keepNDec(lowestPoint.y,6)) {
+                lowestPoint = this.vertices[k] ;
+                lowestPointIndex = k;
+            }
+        }
+
+        let res = [] ;
+        for (let k = 0; k < this.vertices.length; k++) {
+            if (keepNDec(lowestPoint.y,6) === keepNDec(this.vertices[k].y,6)) {
+                console.log(parseFloat(lowestPoint.y).toPrecision(2))
+                res.push(k)
+            }
+        }
+
+        return res ;
     }
 
 }
