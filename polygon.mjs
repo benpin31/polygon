@@ -410,6 +410,13 @@ export class square extends polygon {
             }
         }
 
+        if(res.length == 2) {
+            // return lowest point by abscissa order
+            if (this.vertices[res[0]].x > this.vertices[res[1]].x) {
+                res = [res[1], res[0]] ;
+            };
+        } 
+
         return res ;
     }
 
