@@ -1,4 +1,9 @@
-/*  to complete
+/*  Module polygon contains some classes to manage polygon gemetry in code. Principal classes is 
+    classes polygon which contains a method sat for (Separating Axes Theorem) which compute if two polygones are separated.
+
+    Other classes are : 
+    - point, vector, straightLine : they are requisite in polygon definitions and methods
+    - square which extend polygon in the special case of square
 */
 
 /* Various functions */
@@ -19,37 +24,41 @@ export class point {
         this.y = y ;
     }
 
-    distance(other) {
-        /* other is an other instance of point */
-        return Math.sqrt( (this.x - other.y) ** 2 + (this.y - other.y) ** 2);
-    }
-
     sameAbsciss(other) {
+        /* return true if this and other have the same abscissa */
         return this.x === other.x ;
     }
 
     sameOrdinate(other) {
+        /* return true if this and other have the same ordinate */
         return this.y === other.y ;
     }
 
     equal(other) {
+        /* return trus if this and other are equal (same abscissa and odinate) */
         return this.sameAbsciss(other) && this.sameOrdinate(other) ;
     }
 
+    distance(other) {
+        /* return the distance between this and other */
+        return Math.sqrt( (this.x - other.y) ** 2 + (this.y - other.y) ** 2);
+    }
+
     addVector(v) {
-        /* add a vector to ths point */
+        /* compute a new point which is the sum of this and a vector v. v is an elemnt of class vector */
         let res = new point(this.x + v.x, this.y + v.y) ;
         return res ;
     }
 
     translate(v) {
         /*  translate point this of vector v. contrary to addVector : the method change directly
-            the attribute of the point and return nothing*/
+            the attribute of the point and return nothing */
         this.x += v.x;
         this.y += v.y;
     }
 
     static segmentCenter(point1, point2) {
+        /*  Compute the center of th segment defined by points point1 and point2 */
        let res = new point((point1.x+point2.x)/2, (point1.y+point2.y)/2)
        return res ;
     }
@@ -72,6 +81,7 @@ export class vector {
     }
 
     is0() {
+        /* return true if the vector is null vector */
         return this.x === 0 && this.y === 0 ;
     }
 
@@ -82,16 +92,18 @@ export class vector {
     }
 
     product(lambda) {
-        /* return the external product od this per lambda*/
+        /* return the external product of this per lambda*/
         let res = new vector(lambda * this.x, lambda * this.y) ;
         return res ;
     }
 
     scalarProduct(other) {
+        /* compute the scalar product of this and other */
         return this.x*other.x + this.y*other.y ;
     } 
 
     norm() {
+        /* compute the norm of this */
         return Math.sqrt(this.scalarProduct(this)) ;
     }
 
@@ -108,14 +120,18 @@ export class vector {
     }
 
     polarCoordinate() {
+        /*  Compute the polar coordintes of this */
         return [this.norm(), Math.atan(this.y/this.x)] ;
     }
 }
 
 export class straightLine {
     constructor(point1, element) {
-        /*  Straight line are coding but two disctinct instance of class point. Element can be a point, in that cas, 
-            the constructior is obvious, or a vector */
+        /*  Straight lines can be definied two ways : 
+            - by two points : in that case, element must be a point
+            - by a point and a director vector, in that case, element must be a vector.
+            In all the case, a straightLine has only two moints attributes. If defined by a vector, the constructor
+            compute the other point*/
 
         if (element instanceof point) {
             if (!point1.equal(element)) {
@@ -136,6 +152,8 @@ export class straightLine {
     }
 
     equation() {
+        /*  return the equation of the straight line on the form of and array od three members. Equation ax+by+c = 0
+            is coded by [a,b,c] */
         if (this.point1.sameAbsciss(this.point2)) {
             return([1,0,-this.point1.x])
         } else {
@@ -146,8 +164,8 @@ export class straightLine {
     }
 
     isBefore(point1, point2) {
-        /*  We define and order relation which will be usefull to separate points in sat. point1 and point2 must belong to 
-            this */
+        /*  Indicate in fot two points point1 and point2 on the line this, point1 < point2. To answer a question, we use the 
+            order relation defined by M <= N if M.x <= N.x and line is not parallel to y-axe, and M.y < N.y otherwise*/
         if (this.point1.sameAbsciss(this.point2)) {
             return point1.y <= point2.y ;
         } else {
@@ -156,8 +174,7 @@ export class straightLine {
     }
 
     isBeforeStrict(point1, point2) {
-        /*  We define and order relation which will be usefull to separate points in sat. point1 and point2 must belong to 
-            this */
+        /*  strict vection of isBefore */
         if (this.point1.sameAbsciss(this.point2)) {
             return point1.y < point2.y ;
         } else {
@@ -165,8 +182,8 @@ export class straightLine {
         }
     }
 
-
     distanceToPoint(point) {
+        /*  Compute the distance between line this and point */
         let lineEquation = this.equation() ;
         let numerator = Math.abs(lineEquation[0]*point.x + lineEquation[1]*point.y + lineEquation[2] );
         let denominator = Math.sqrt(lineEquation[0] ** 2 + lineEquation[1] ** 2);
@@ -174,14 +191,14 @@ export class straightLine {
     }
 
     orthogonalProjection(point) {
-        /* return the orthogonal prohjection of point on the straight line this*/
+        /*  return the orthogonal prohjection of point on the straight line this */
         let direction = new vector(this.point1, this.point2) ;
         let vectorToProject = new vector(this.point1, point) ;
         return this.point1.addVector(direction.othogonalProjection(vectorToProject)) ;
     }
 
     getOrthogonalLine() {
-        /* return the orthogonal line of this which pass through the point (0,0) */
+        /*  return the orthogonal line of this which pass through the point (0,0) */
         let lineEquation = this.equation() ;
         let originPoint = new point(0,0) ;
         let orthogonalDirection = new vector(lineEquation[0], lineEquation[1]) ;
@@ -196,7 +213,7 @@ export class polygon {
     constructor(vertices, parallelEdge = null) {
         /*  vertices array is a list of point which determine the vertices of the polygon. The list must contain 
             only one exemplary of points. 
-            One can precise the list od the edge that are parallel on the polygon, it will be usefull to optimise 
+            One can precise the list of the edge that are parallel on the polygon, it will be usefull to optimise 
             sat algorithme. The structure of parralelEdge is an array of array constaining the number of the edge, 
             with the first edge defining by the first two points, and then following the order. parallelEdge must be null
             or contains all the edge, not only part of the edge. Two array in the same 
@@ -207,6 +224,7 @@ export class polygon {
     }
 
     translate(translationVector) {
+        /*  tranlaction of the polygon of vector v. Methods don't return new polygon, but modify directly the attributes*/
         this.vertices.forEach(point => {
             point.translate(translationVector) ;
         })
@@ -251,7 +269,7 @@ export class polygon {
                 Two convex polytopes are disjoint iff there exists a separating axis orthogonal 
                 to a face of either polytope or orthogonal to an edge from each polytope. 
             The argument areParallet indicate if all the edge of other are parallel to an edge of this. In that
-            case, there is no need to compute orthogonal lines of edges of other*/
+            case, there is no need to compute orthogonal lines of edges of other */
 
         // 1. Get all the orthogonal axis : 
 
@@ -263,12 +281,14 @@ export class polygon {
             })
         }
 
-        // 2. point porjection on othogonal line
+        // 2. point projection on othogonal line
 
         let isSeparate = false ;
         let cpt = 0;
         
         while (cpt < orthogonalLines.length && !isSeparate) {
+            // we test sepration on each orthogonal lines. We continue testing separtion until we find
+            // a line wich separte the two polygones
             let line = orthogonalLines[cpt] ;
 
             let maxThis = new point(-Infinity,-Infinity) ;
@@ -278,6 +298,8 @@ export class polygon {
 
             let proj
             this.vertices.forEach(vertice => {
+                // projection of this on the line. We only keep min and max projection which will
+                // be compared to min and max projection of other
                 proj = line.orthogonalProjection(vertice) ;
                 if(line.isBefore(maxThis, proj)) {
                     maxThis = proj ;
@@ -289,6 +311,8 @@ export class polygon {
             })
             
             other.vertices.forEach(vertice => {
+                // projection of other on the line. We only keep min and max projection which will
+                // be compared to min and max projection of other
                 proj = line.orthogonalProjection(vertice) ;
                 if(line.isBefore(maxOther, proj)) {
                     maxOther = proj ;
@@ -300,6 +324,7 @@ export class polygon {
             })
 
             if (line.isBeforeStrict(maxThis, minOther) || line.isBeforeStrict(maxOther, minThis)) {
+                // the projections are separated on the line if maxThis < minOhter or maxOther < minThis
                 isSeparate = true
             }
 
@@ -387,16 +412,20 @@ export class square extends polygon {
     }
 
     translate(transactionVector) {
+        // extend class translate of polygon by translative square center plus the points or the polygon
         super.translate(transactionVector) ;
         this.center.translate(transactionVector) ;
     }
 
     getLowestPointIndex() {
+        // indicate the index of the point(s) of minimal ordinates of the the square. If two points, we return
+        // first the point with lowest abscissa.    
         let lowestPoint = new point(Infinity, Infinity) ;
         let lowestPointIndex = null ;
 
         for (let k = 0; k < this.vertices.length; k++) {
             if (keepNDec(this.vertices[k].y,6) < keepNDec(lowestPoint.y,6)) {
+                // comparision are mad with 6 decimal to avoid precision error of java script
                 lowestPoint = this.vertices[k] ;
                 lowestPointIndex = k;
             }
@@ -405,6 +434,7 @@ export class square extends polygon {
         let res = [] ;
         for (let k = 0; k < this.vertices.length; k++) {
             if (keepNDec(lowestPoint.y,6) === keepNDec(this.vertices[k].y,6)) {
+                // comparision are mad with 6 decimal to avoid precision error of java script
                 console.log(parseFloat(lowestPoint.y).toPrecision(2))
                 res.push(k)
             }
