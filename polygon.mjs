@@ -300,22 +300,32 @@ export class polygon {
         let otherNbVertices = other.vertices.length ;
 
         let thisSide = equation[0]*thisBarycenter.x + equation[1]*thisBarycenter.y + equation[2] ;
-        let pointSide ;
 
-        let nbSeparatedPoint = 0;
+        let pointSideSet = [];
+        let pointSide = [];
+
         let pointOnSepartor = [];
 
         for (let k = 0; k < otherNbVertices ; k++) {
             pointSide = equation[0]*other.vertices[k].x + equation[1]*other.vertices[k].y + equation[2] ;
-            if (pointSide*thisSide < 0) {
-                nbSeparatedPoint++ ;
-            } /*else if (pointSide === 0) {
-                nbSeparatedPoint++ ;
+            pointSideSet.push(pointSide) ;
+            if( keepNDec(pointSide, 10) === 0) {
                 pointOnSepartor.push(other.vertices[k])  
-            }*/
+            }
         }
+        console.log(pointOnSepartor)
 
-        return otherNbVertices === nbSeparatedPoint ;
+        let minPointSide = Math.min.apply(Math, pointSideSet) ;
+        let maxPointSide = Math.max.apply(Math, pointSideSet)
+        
+        if (keepNDec(thisSide, 10) == 0) {
+            return keepNDec(minPointSide, 10)* keepNDec(maxPointSide, 10) >= 0 ;
+        } else {
+            return keepNDec(thisSide, 10)* keepNDec(maxPointSide, 10) <= 0 && 
+                        keepNDec(minPointSide, 10)* keepNDec(thisSide, 10) <= 0 ;
+            ;
+
+        }
 
     }
 
@@ -539,12 +549,12 @@ let B = new point(1,0.5) ;
 let C = new point(0.5,1) ;
 let D = new point(0,0.5) ;
 
-let E = new point(1.5,0) ;
-let F = new point(2,0.5) ;
-let G = new point(1.5,1) ;
-let H = new point(1,0.50001) ;
+let E = new point(0.8,0) ;
+let F = new point(2,0) ;
+let G = new point(2,1) ;
+let H = new point(1,1) ;
 
-let P1 = new polygon([A,B,C,D]) ;
+let P1 = new polygon([A,B, C, D]) ;
 let P2 = new polygon([E,F, G, H]) ;
 let P3 = new polygon([A,C]) ;
 
