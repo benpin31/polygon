@@ -232,6 +232,36 @@ export class polygon {
 
     /*  SAT algorithm */
 
+    equationEdge() {
+        let equations = [] 
+        let line ;
+        let nbVertices = this.vertices.length
+        if (nbVertices > 2) {
+            for (let k = 0; k < nbVertices; k++) {
+                line = new straightLine(this.vertices[k], this.vertices[(k+1)%nbVertices]) ;
+                equations.push(line.equation()) ;
+            }
+        } else {
+            line = new straightLine(this.vertices[0], this.vertices[1]) ;
+            equations.push(line.equation()) ;
+        }
+        return(equations)
+    }
+
+    isoBarycenter() {
+        let barycenterAbscissa = 0 ;
+        let barycenterOrdinate = 0 ;
+        this.vertices.forEach(point => {
+            barycenterAbscissa += point.x;
+            barycenterOrdinate += point.y;
+        }) 
+
+        let res = new point(1/this.vertices.length * barycenterAbscissa, 1/this.vertices.length * barycenterOrdinate) ;
+        return res ;
+    }
+
+
+
     getOrthogonalLines() {
         /*  return the set of orthogonal lines of the edges of this. If two edges of the polygone are parallels
             we return only one line */
@@ -261,6 +291,54 @@ export class polygon {
         })
 
         return orthogonalLines ;
+    }
+
+    sepration(other, equation) {
+        /* indicatate if an edge (array or two consecutive points of this) of this seprate this from other */
+        let thisBarycenter = this.isoBarycenter() ;
+
+        let otherNbVertices = other.vertices.length ;
+
+        let thisSide = equation[0]*thisBarycenter.x + equation[1]*thisBarycenter.y + equation[2] ;
+        let pointSide ;
+
+        let nbSeparatedPoint = 0;
+        let pointOnSepartor = [];
+
+        for (let k = 0; k < otherNbVertices ; k++) {
+            pointSide = equation[0]*other.vertices[k].x + equation[1]*other.vertices[k].y + equation[2] ;
+            if (pointSide*thisSide < 0) {
+                nbSeparatedPoint++ ;
+            } /*else if (pointSide === 0) {
+                nbSeparatedPoint++ ;
+                pointOnSepartor.push(other.vertices[k])  
+            }*/
+        }
+
+        return otherNbVertices === nbSeparatedPoint ;
+
+    }
+
+    sat2(other) {
+        let thisEquations = this.equationEdge() ;
+        let otherEquations = other.equationEdge() ;
+
+        let isSeparated = false ;
+        let cpt = 0 ;
+        do {
+            isSeparated = this.sepration(other, thisEquations[cpt]) ;
+            cpt ++;
+        } while (cpt < thisEquations.length & !isSeparated) 
+
+        if (!isSeparated) {
+            cpt = 0;
+            do {
+                isSeparated = other.sepration(this, otherEquations[cpt]) ;
+                cpt ++;
+            } while (cpt < otherEquations.length & !isSeparated) 
+        }
+
+        return isSeparated ;
     }
 
     sat(other, areParallel = false) {
@@ -451,6 +529,26 @@ export class square extends polygon {
     }
 
 }
+
+
+
+//  Main test ;
+
+let A = new point(0.5,0) ;
+let B = new point(1,0.5) ;
+let C = new point(0.5,1) ;
+let D = new point(0,0.5) ;
+
+let E = new point(1.5,0) ;
+let F = new point(2,0.5) ;
+let G = new point(1.5,1) ;
+let H = new point(1,0.50001) ;
+
+let P1 = new polygon([A,B,C,D]) ;
+let P2 = new polygon([E,F, G, H]) ;
+let P3 = new polygon([A,C]) ;
+
+console.log(P1.sat2(P2))
 
 
 
