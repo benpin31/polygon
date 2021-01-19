@@ -57,11 +57,6 @@ export class point {
         this.y += v.y;
     }
 
-    static segmentCenter(point1, point2) {
-        /*  Compute the center of th segment defined by points point1 and point2 */
-       let res = new point((point1.x+point2.x)/2, (point1.y+point2.y)/2)
-       return res ;
-    }
 }
 
 export class vector {
@@ -113,12 +108,6 @@ export class vector {
         return res;
     }
 
-    othogonalProjection(v) {
-        /* return the orthogonal projection of v on this */
-        let res = this.product(this.scalarProduct(v) / (this.norm() ** 2));
-        return res ;
-    }
-
     polarCoordinate() {
         /*  Compute the polar coordintes of this */
         return [this.norm(), Math.atan(this.y/this.x)] ;
@@ -163,64 +152,59 @@ export class straightLine {
         }
     }
 
-    isBefore(point1, point2) {
-        /*  Indicate in fot two points point1 and point2 on the line this, point1 < point2. To answer a question, we use the 
-            order relation defined by M <= N if M.x <= N.x and line is not parallel to y-axe, and M.y < N.y otherwise*/
-        if (this.point1.sameAbsciss(this.point2)) {
-            return point1.y <= point2.y ;
-        } else {
-            return point1.x <= point2.x ;
-        }
+}
+
+export class segment {
+    constructor(point1, point2) {
+        this.point1 = point1 ;
+        this.point2 = point2 ;
     }
 
-    isBeforeStrict(point1, point2) {
-        /*  strict vection of isBefore */
-        if (this.point1.sameAbsciss(this.point2)) {
-            return point1.y < point2.y ;
-        } else {
-            return point1.x < point2.x ;
-        }
-    }
-
-    distanceToPoint(point) {
-        /*  Compute the distance between line this and point */
-        let lineEquation = this.equation() ;
-        let numerator = Math.abs(lineEquation[0]*point.x + lineEquation[1]*point.y + lineEquation[2] );
-        let denominator = Math.sqrt(lineEquation[0] ** 2 + lineEquation[1] ** 2);
-        return numerator/denominator;
-    }
-
-    orthogonalProjection(point) {
-        /*  return the orthogonal prohjection of point on the straight line this */
-        let direction = new vector(this.point1, this.point2) ;
-        let vectorToProject = new vector(this.point1, point) ;
-        return this.point1.addVector(direction.othogonalProjection(vectorToProject)) ;
-    }
-
-    getOrthogonalLine() {
-        /*  return the orthogonal line of this which pass through the point (0,0) */
-        let lineEquation = this.equation() ;
-        let originPoint = new point(0,0) ;
-        let orthogonalDirection = new vector(lineEquation[0], lineEquation[1]) ;
-        let res = new straightLine(originPoint, orthogonalDirection) ;
-
+    center() {
+        /* return the center of the segment */
+        let res = new point((this.point1.x+this.point2.x)/2, (this.point1.y+this.point2.y)/2) ;
         return res ;
+    }
+
+    containPoint(point) {
+        /*  for a point which lie on line (point1, point2) (be carreful, the methode doesn't verify it), 
+            say if point belongs to the segment. */
+        let vector1 = new vector(this.point1, this.point2) ;
+        let vector2 = new vector(this.point1,point) ;
+
+        let scalarProd1 = vector1.scalarProduct(vector2) ;
+        let scalarProd2 = vector1.scalarProduct(vector1) ;
+
+        return scalarProd1 >= 0 && scalarProd1 <= scalarProd2 ;
+    }
+
+    intersect(other) {
+        /*  other is antoher segment of the line with direction this. Return true if intersections between 
+            this and other is not null*/
+
+        let segmentVector = new vector(this.point1, this.point2) ;
+        let vector1 = new vector(this.point1, other.point1) ;
+        let vector2 = new vector(this.point1, other.point2) ;
+        let vector3 = new vector(this.point2, other.point1) ;
+        let vector4 = new vector(this.point2, other.point2) ;
+
+        let scalarProd1 = segmentVector.scalarProduct(vector1) ;
+        let scalarProd2 = segmentVector.scalarProduct(vector2) ;
+        let scalarProd3 = segmentVector.scalarProduct(vector3) ;
+        let scalarProd4 = segmentVector.scalarProduct(vector4) ;
+
+        return !( (scalarProd1 < 0 && scalarProd2 < 0) || (scalarProd3 > 0 && scalarProd4 > 0)) ;
+
     }
 
 }
 
 export class polygon {
-    constructor(vertices, parallelEdge = null) {
+    constructor(vertices) {
         /*  vertices array is a list of point which determine the vertices of the polygon. The list must contain 
             only one exemplary of points. 
-            One can precise the list of the edge that are parallel on the polygon, it will be usefull to optimise 
-            sat algorithme. The structure of parralelEdge is an array of array constaining the number of the edge, 
-            with the first edge defining by the first two points, and then following the order. parallelEdge must be null
-            or contains all the edge, not only part of the edge. Two array in the same 
-            subarray arre parallels. For example, let ABCDEF a polygon, the the array [[0,2],[1,4],[3],[5]] mean that AB//CD, 
-            BC//EF , DE and FA are parallel to no other edges. */
+         */
         this.vertices = vertices ;
-        this.parallelEdge = parallelEdge;
     }
 
     translate(translationVector) {
@@ -230,25 +214,24 @@ export class polygon {
         })
     }
 
-    /*  SAT algorithm */
-
-    equationEdge() {
-        let equations = [] 
-        let line ;
+    edges() {
+        /* return the list of edges of the polygon */
+        let edges = [] 
         let nbVertices = this.vertices.length
         if (nbVertices > 2) {
             for (let k = 0; k < nbVertices; k++) {
-                line = new straightLine(this.vertices[k], this.vertices[(k+1)%nbVertices]) ;
-                equations.push(line.equation()) ;
+                let edge = new segment(this.vertices[k], this.vertices[(k+1)%nbVertices]) ;
+                edges.push(edge) ;
             }
         } else {
-            line = new straightLine(this.vertices[0], this.vertices[1]) ;
-            equations.push(line.equation()) ;
+            let edge = new segment(this.vertices[0], this.vertices[1]) ;
+            edges.push(edge) ;
         }
-        return(equations)
+        return(edges)
     }
 
     isoBarycenter() {
+        /* return ths isoBarycenter (with coefficients = 1) of the polygon */
         let barycenterAbscissa = 0 ;
         let barycenterOrdinate = 0 ;
         this.vertices.forEach(point => {
@@ -260,46 +243,29 @@ export class polygon {
         return res ;
     }
 
+    /*  SAT algorithm */
 
-
-    getOrthogonalLines() {
-        /*  return the set of orthogonal lines of the edges of this. If two edges of the polygone are parallels
-            we return only one line */
-        let verticesLine = [];
-        let nbVertices = this.vertices.length;
-        let line ;
-        let nbLoop ;
-        if (this.parallelEdge === null) {
-            nbLoop = nbVertices ;
-            for (let k = 0; k < nbLoop; k++) {
-                line = new straightLine(this.vertices[k], this.vertices[(k+1)%nbVertices]) ;
-                verticesLine.push(line) ;
-            }
-        } else {
-            nbLoop = this.parallelEdge.length ;
-            let firstPoint ;
-            for (let k = 0; k < nbLoop; k++) {
-                firstPoint = this.parallelEdge[k][0]
-                line = new straightLine(this.vertices[firstPoint], this.vertices[(firstPoint+1)%nbVertices]) ;
-                verticesLine.push(line) ;
-            }
-        }
-
-        let orthogonalLines = []
-        verticesLine.forEach(line => {
-            orthogonalLines.push(line.getOrthogonalLine()) ;
-        })
-
-        return orthogonalLines ;
-    }
-
-    sepration(other, equation) {
-        /* indicatate if an edge (array or two consecutive points of this) of this seprate this from other */
-        let thisBarycenter = this.isoBarycenter() ;
+    static separation(other, edge, barycenter) {
+        /*  Considers a polygone with barycenter "barycenter", and "other" another polygone. Suppose
+            that edge is an edge of the first polygon. Separation methode return true if the straightLine with direction
+            edge separte the two polygones. To do that : 
+            - we consider the equation of the line generate by edge : ax+by+c = 0
+            - we replace x and y by coordinate of the barycenter and get a number A
+            - for all points of other, we replace x and y by point coordinates and get numbers B1,... Bn
+            
+            - If A = 0, it means that the first polygone is a segment. In that case, edge separate other if
+            all B1,...,Bn have the same sign.
+            - if A != 0, the edge seprate the polygones if B1,...,Bn have same sign, and that sign is different of A
+            
+            In some situations, we can have one or two of the B1,...,Bn which are = 0. Never more, because, it would say 
+            that three points of other are align. In that case, if Bk beloongs to edge, or the segment [Bk, Bl] have
+            non null intersection with edge, one have found common points for the two polygons, and they are not separate*/
 
         let otherNbVertices = other.vertices.length ;
+        let segmentLine = new straightLine(edge.point1, edge.point2) ;
+        let equation = segmentLine.equation()
 
-        let thisSide = equation[0]*thisBarycenter.x + equation[1]*thisBarycenter.y + equation[2] ;
+        let thisSide = equation[0]*barycenter.x + equation[1]*barycenter.y + equation[2] ;
 
         let pointSideSet = [];
         let pointSide = [];
@@ -313,121 +279,76 @@ export class polygon {
                 pointOnSepartor.push(other.vertices[k])  
             }
         }
-        console.log(pointOnSepartor)
 
-        let minPointSide = Math.min.apply(Math, pointSideSet) ;
-        let maxPointSide = Math.max.apply(Math, pointSideSet)
-        
-        if (keepNDec(thisSide, 10) == 0) {
-            return keepNDec(minPointSide, 10)* keepNDec(maxPointSide, 10) >= 0 ;
-        } else {
-            return keepNDec(thisSide, 10)* keepNDec(maxPointSide, 10) <= 0 && 
-                        keepNDec(minPointSide, 10)* keepNDec(thisSide, 10) <= 0 ;
-            ;
-
+        let commonPoint = false ;
+        if (pointOnSepartor.length == 1) {
+            if (edge.containPoint(pointOnSepartor[0])) {
+                commonPoint = true ;
+            }
+        } else if (pointOnSepartor.length == 2) {
+            let alignSegment = new segment(pointOnSepartor[0], pointOnSepartor[1]);
+            if (edge.intersect(alignSegment)) {
+                commonPoint = true ;
+            }
         }
 
+        if (commonPoint) {
+            return false
+        } else  {
+            let minPointSide = Math.min.apply(Math, pointSideSet) ;
+            let maxPointSide = Math.max.apply(Math, pointSideSet)
+            
+            if (keepNDec(thisSide, 10) == 0) {
+                return keepNDec(minPointSide, 10)* keepNDec(maxPointSide, 10) >= 0 ;
+            } else {
+                return keepNDec(thisSide, 10)* keepNDec(maxPointSide, 10) <= 0 && 
+                            keepNDec(minPointSide, 10)* keepNDec(thisSide, 10) <= 0 ;
+                ;
+    
+            }
+        }
     }
 
-    sat2(other) {
-        let thisEquations = this.equationEdge() ;
-        let otherEquations = other.equationEdge() ;
+    sat(other) {
+    /*  Separating Axes Theorem (S. Gottschalk. Separating axis theorem. Technical Report TR96-024,Department
+        of Computer Science, UNC Chapel Hill, 1996) : 
+            Two convex polytopes are disjoint iff there exists a separating axis orthogonal 
+            to a face of either polytope or orthogonal to an edge from each polytope.
+            
+        Our version of sat can also sepate segments which are degenerate polygons.
+     */
+
+        let thisEdges = this.edges() ;
+        let otherEdges = other.edges() ;
+
+        let thisBarycenter = this.isoBarycenter() ;
+        let otherBarycenter = other.isoBarycenter() ;
 
         let isSeparated = false ;
         let cpt = 0 ;
         do {
-            isSeparated = this.sepration(other, thisEquations[cpt]) ;
+            /* try to find a separator wicth edge of this */
+            isSeparated = polygon.separation(other, thisEdges[cpt], thisBarycenter) ;
             cpt ++;
-        } while (cpt < thisEquations.length & !isSeparated) 
+        } while (cpt < thisEdges.length & !isSeparated) 
 
         if (!isSeparated) {
+            /* if no edges of this ae separting, one try with edges of other */
             cpt = 0;
             do {
-                isSeparated = other.sepration(this, otherEquations[cpt]) ;
+                isSeparated = polygon.separation(this, otherEdges[cpt], otherBarycenter) ;
                 cpt ++;
-            } while (cpt < otherEquations.length & !isSeparated) 
+            } while (cpt < otherEdges.length & !isSeparated) 
         }
 
         return isSeparated ;
     }
 
-    sat(other, areParallel = false) {
-        /*  Separating Axes Theorem (S. Gottschalk. Separating axis theorem. Technical Report TR96-024,Department
-            of Computer Science, UNC Chapel Hill, 1996) : 
-                Two convex polytopes are disjoint iff there exists a separating axis orthogonal 
-                to a face of either polytope or orthogonal to an edge from each polytope. 
-            The argument areParallet indicate if all the edge of other are parallel to an edge of this. In that
-            case, there is no need to compute orthogonal lines of edges of other */
-
-        // 1. Get all the orthogonal axis : 
-
-        let orthogonalLines = this.getOrthogonalLines() ;
-        if (!areParallel) {
-            let otherOrthogonalLine = other.getOrthogonalLines() ;
-            otherOrthogonalLine.forEach(line => {
-                orthogonalLines.push(line)
-            })
-        }
-
-        // 2. point projection on othogonal line
-
-        let isSeparate = false ;
-        let cpt = 0;
-        
-        while (cpt < orthogonalLines.length && !isSeparate) {
-            // we test sepration on each orthogonal lines. We continue testing separtion until we find
-            // a line wich separte the two polygones
-            let line = orthogonalLines[cpt] ;
-
-            let maxThis = new point(-Infinity,-Infinity) ;
-            let maxOther = new point(-Infinity,-Infinity) ; 
-            let minThis = new point(Infinity,Infinity) ;
-            let minOther = new point(Infinity,Infinity) ; 
-
-            let proj
-            this.vertices.forEach(vertice => {
-                // projection of this on the line. We only keep min and max projection which will
-                // be compared to min and max projection of other
-                proj = line.orthogonalProjection(vertice) ;
-                if(line.isBefore(maxThis, proj)) {
-                    maxThis = proj ;
-                }
-
-                if(line.isBefore(proj, minThis)) {
-                    minThis = proj ;
-                }
-            })
-            
-            other.vertices.forEach(vertice => {
-                // projection of other on the line. We only keep min and max projection which will
-                // be compared to min and max projection of other
-                proj = line.orthogonalProjection(vertice) ;
-                if(line.isBefore(maxOther, proj)) {
-                    maxOther = proj ;
-                }
-
-                if(line.isBefore(proj, minOther)) {
-                    minOther = proj ;
-                }
-            })
-
-            if (line.isBeforeStrict(maxThis, minOther) || line.isBeforeStrict(maxOther, minThis)) {
-                // the projections are separated on the line if maxThis < minOhter or maxOther < minThis
-                isSeparate = true
-            }
-
-            cpt++ ;
-        }
-
-    return isSeparate ;
-
-    }
 }
 
 export class square extends polygon {
     /*  A square extend polygon class. Square attributes are
         - a set of 4 points
-        - a description of parallelEdge (see class polygon) which is always [[0,2], [1,3]]
         - a center : the barycenter of the square 
         - a direction which is polar coordinates of the first edge of the square.
         Two last attribute are commod in order to rotate the square according to its center.*/
@@ -445,6 +366,7 @@ export class square extends polygon {
 
         let direction ;
         let polarDirection ;
+        let diagonal ;
         let center ;
 
         if (element2 instanceof point) {
@@ -454,7 +376,8 @@ export class square extends polygon {
             polarDirection = direction.polarCoordinate() ;
             point3 = point2.addVector(direction.orthogonalVector()) ;
             point4 = point3.addVector(direction.orthogonalVector().orthogonalVector()) ;
-            center = point.segmentCenter(point1, point3) ;
+            diagonal = new segment(point1, point3)
+            center = diagonal.center() ;
         } else {
             polarDirection = element2 ;
             direction = new vector(polarDirection[0]*Math.cos(polarDirection[1]), polarDirection[0]*Math.sin(polarDirection[1])) ;
@@ -465,7 +388,8 @@ export class square extends polygon {
             point4 = point3.addVector(direction.orthogonalVector().orthogonalVector()) ;
 
             // translate the square to the good position
-            let initialCenter = point.segmentCenter(point1, point3) ;
+            diagonal = new segment(point1, point3)
+            let initialCenter = diagonal.center() ;
             center = element1 ;
             let translationVector = new vector(initialCenter, center) ;
 
@@ -490,7 +414,8 @@ export class square extends polygon {
         this.vertices[2] = this.vertices[1].addVector(direction.orthogonalVector()) ;
         this.vertices[3] = this.vertices[2].addVector(direction.orthogonalVector().orthogonalVector()) ;
 
-        let initialCenter = point.segmentCenter(this.vertices[0], this.vertices[2]) ;
+        let diagonal = new segment(this.vertices[0], this.vertices[2]) ;
+        let initialCenter = diagonal.center() ;
         let translationVector = new vector(initialCenter, this.center) ;
 
         this.vertices[0].translate(translationVector) ;
@@ -523,7 +448,6 @@ export class square extends polygon {
         for (let k = 0; k < this.vertices.length; k++) {
             if (keepNDec(lowestPoint.y,6) === keepNDec(this.vertices[k].y,6)) {
                 // comparision are mad with 6 decimal to avoid precision error of java script
-                console.log(parseFloat(lowestPoint.y).toPrecision(2))
                 res.push(k)
             }
         }
@@ -539,26 +463,3 @@ export class square extends polygon {
     }
 
 }
-
-
-
-//  Main test ;
-
-let A = new point(0.5,0) ;
-let B = new point(1,0.5) ;
-let C = new point(0.5,1) ;
-let D = new point(0,0.5) ;
-
-let E = new point(0.8,0) ;
-let F = new point(2,0) ;
-let G = new point(2,1) ;
-let H = new point(1,1) ;
-
-let P1 = new polygon([A,B, C, D]) ;
-let P2 = new polygon([E,F, G, H]) ;
-let P3 = new polygon([A,C]) ;
-
-console.log(P1.sat2(P2))
-
-
-
