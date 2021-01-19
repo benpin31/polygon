@@ -200,6 +200,10 @@ export class segment {
 }
 
 export class polygon {
+    /*  gather some methods relatives to polygones. Polygones are given by an array of en points (their vertices).
+        Class polygon accept semgement as degenrate polygon. It can usefull to define segment as polygon to apply them
+        sat algorithm. On the other hand, class polygon doesn't herit from segment, so segment method can't be applied
+        directly to "segment polygon" */
     constructor(vertices) {
         /*  vertices array is a list of point which determine the vertices of the polygon. The list must contain 
             only one exemplary of points. 
@@ -243,7 +247,7 @@ export class polygon {
         return res ;
     }
 
-    /*  SAT algorithm */
+    /*  SAT algorithm. Be carrefull : work only for convex polygons*/
 
     static separation(other, edge, barycenter) {
         /*  Considers a polygone with barycenter "barycenter", and "other" another polygone. Suppose
@@ -316,6 +320,8 @@ export class polygon {
             to a face of either polytope or orthogonal to an edge from each polytope.
             
         Our version of sat can also sepate segments which are degenerate polygons.
+
+        Be carrefull : work only for convex polygons.
      */
 
         let thisEdges = this.edges() ;
