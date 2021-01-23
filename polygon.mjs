@@ -24,6 +24,10 @@ export class point {
         this.y = y ;
     }
 
+    copy() {
+        return new point(this.x, this.y) ;
+    }
+
     sameAbsciss(other) {
         /* return true if this and other have the same abscissa */
         return this.x === other.x ;
@@ -54,7 +58,9 @@ export class point {
         /*  translate point this of vector v. contrary to addVector : the method change directly
             the attribute of the point and return nothing */
         this.x += v.x;
+        this.x = keepNDec(this.x, 10) ;
         this.y += v.y;
+        this.y = keepNDec(this.y, 10) ;
     }
 
 }
@@ -150,6 +156,11 @@ export class straightLine {
             let ordinateOrigin = this.point1.y - direction*this.point1.x ;
             return([-direction, 1, -ordinateOrigin])
         }
+    }
+
+    containPoint(point) {
+        let equationLine = this.equation() ;
+        return keepNDec(equationLine[0]*point.x + equationLine[1]*point.y + equationLine[2], 10) === 0 ;
     }
 
 }
@@ -411,7 +422,7 @@ export class square extends polygon {
 
     rotate(angle) {
         /* rotate the square according to its center. angle is in radiant */
-        this.polarDirection[1] = angle ;
+        this.polarDirection[1] += angle ;
         let direction = new vector(this.polarDirection[0]*Math.cos(this.polarDirection[1]), 
             this.polarDirection[0]*Math.sin(this.polarDirection[1])) ;
 
